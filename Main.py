@@ -109,7 +109,6 @@ class DownloadsImageDog(DownloadsImage):
         """
         check if the breeds are on the list
         """
-        print('Проверяем наличие породы собаки в списке')
         responses = requests.get(self.url_list_all_breeds)
         if breed in responses.json()['message']:
             return True
@@ -131,42 +130,51 @@ class DownloadsImageDog(DownloadsImage):
         """
         after check create folder for dogs in YD
         """
-        if self.check_breed_in_list() == True:
+        if self.check_breed_in_list():
             print('Создание папки для породы')
             responses = requests.put(f'{self.yd_url}{self.yd_url_1}?path={self.name_group}%2F{self.breed}', headers=self.headers)
             # check if there is a path
             try:
                 if str(responses.json()['error']) == 'DiskPathDoesntExistsError':
+                    print(f'Не найдена папка с {self.name_group}')
                     self.create_yd_folder_for_group()
                     return self.create_yd_folder_for_dogs()
             except KeyError:
-                print('Ошибка. В теле ответа не найден ключ "error", всё нормально! Продолжаем работать;)')
-            if self.check_sub_breed_in_list == True:
+                pass
+            if self.check_sub_breed_in_list():
                 print('Создание папок для подпород')
                 responses = requests.get(self.url_list_all_breeds)
                 for sb in responses.json()['message'][breed]:
                     requests.put(f'{self.yd_url}{self.yd_url_1}?path={self.name_group}%2F{self.breed}%2F{sb}',
                                  headers=self.headers)
         else:
-            print('Произошла ошибка с проверкой породы в create_yd_folder_for_dogs')
+            print('Указанной породы нет в списке')
 
     def dog_breed_report(self):
         """
         report is making of file in yandex disk
         """
         # we do the request until we get response
-        # ДОБАВИТЬ 2 БЛОК ДЛЯ СОЗДАНИЯ ОТЧЕТА ПРИ ЗАГРУЗКЕ ПОДПОРОД, НО СНАЧАЛА НАДО РЕАЛИЗОВАТЬ ЗАГРУЗКУ ПО ПАПКАМ
-        # СОЗДАНИЯ ФАЙЛА .JSON МОЖНО НЕ ТРОГАТЬ, ДОСТАТОЧНО ПРИВЕСТИ ВСЕ ФАЙЛЫ К data
         while str(requests.get(f'{self.yd_url}{self.yd_url_1}?path={self.name_group}%2F{self.breed}%2F{self.breed + '_' + self.for_name[-1]}',
             headers=self.headers)) != '<Response [200]>':
-            print('Ждем загрузки файла с собачками на Яндекс диск')
+            print('Ждем загрузки файла с собачками на Яндекс диске')
         # we gain need data and make dictionary
         responses = requests.get(f'{self.yd_url}{self.yd_url_1}?path={self.name_group}%2F{self.breed}%2F{self.breed + '_' + self.for_name[-1]}',
             headers=self.headers)
         self.dog_create_json(responses)
 
     def dog_sub_breed_report(self):
-        pass
+        """
+        it will work only after method download_random_sub_breed_in_yd, him need self.sb and self.for_name
+        """
+        # we do the request until we get response
+        while str(requests.get(f'{self.yd_url}{self.yd_url_1}?path={self.name_group}%2F{self.breed}%2F{self.sb}%2F{self.sb + '_' + self.for_name[-1]}',
+                    headers=self.headers)) != '<Response [200]>':
+            pass
+        responses = requests.get(
+                f'{self.yd_url}{self.yd_url_1}?path={self.name_group}%2F{self.breed}%2F{self.sb}%2F{self.sb + '_' + self.for_name[-1]}',
+                headers=self.headers)
+        self.dog_create_json(responses)
 
     def dog_create_json(self, responses):
         """
@@ -196,7 +204,6 @@ class DownloadsImageDog(DownloadsImage):
         """
         load a random gog image in disk
         """
-        # РАЗДЕЛИТЬ НА 2 БЛОКА КОД, ЕСЛИ ЕСТЬ ПОДПОРОДЫ ИЛИ ИХ НЕТ + СДЕЛАТЬ ОТЧЕТ ПО СОБАКАМ + СДЕЛАТЬ ФРЕЙМБАР
         # create folder for dogs
         self.create_yd_folder_for_dogs()
         # start download image
@@ -209,16 +216,17 @@ class DownloadsImageDog(DownloadsImage):
             responses = requests.post(
                 f'{self.yd_url}{self.yd_url_2}?path={self.name_group}%2F{self.breed}%2F{self.breed+'_'+self.for_name[-1]}&url={responses_dog}',
                 headers=self.headers)
-            self.dog_report()
+            # make report
+            self.dog_breed_report()
         else:
-            print('Файл с котиками с таким именем уже имеется на Яндекс диске')
+            print('Файл с собачками с таким именем уже имеется на Яндекс диске')
         self.download_random_sub_breed_in_yd() # start loading sub-breed
 
     def download_random_sub_breed_in_yd(self):
         """
         load for sub-breed
         """
-        if self.check_sub_breed_in_list() == True:
+        if self.check_sub_breed_in_list():
             responses = requests.get(self.url_list_all_breeds)
             #
             self.sub_breed = responses.json()['message'][breed]
@@ -235,11 +243,12 @@ class DownloadsImageDog(DownloadsImage):
                 # check if file name exist in yandex disk
                 if str(responses) != '<Response [200]>':
                     responses = requests.post(
-                        f'{self.yd_url}{self.yd_url_2}?path={self.name_group}%2F{self.breed}%2F%2F{self.sb}%2F{self.sb + '_' + self.for_name[-1]}&url={responses_dog}',
+                        f'{self.yd_url}{self.yd_url_2}?path={self.name_group}%2F{self.breed}%2F{self.sb}%2F{self.sb + '_' + self.for_name[-1]}&url={responses_dog}',
                         headers=self.headers)
+                    # make report
+                    self.dog_sub_breed_report()
                 else:
-                    print('Файл с котиками с таким именем уже имеется на Яндекс диске')
-            # self.dog_report()
+                    print('Файл с собачками с таким именем уже имеется на Яндекс диске')
         else:
             pass
 
@@ -248,5 +257,7 @@ class DownloadsImageDog(DownloadsImage):
 
 Example_dogs = DownloadsImageDog(Yandex_token.yd_t, breed)
 # print(Example_dogs.check_breed_in_list())
-# Example_dogs.download_random_dog_in_yd()
-Example_dogs.download_random_sub_breed_in_yd()
+# print(Example_dogs.check_sub_breed_in_list())
+Example_dogs.download_random_breed_in_yd()
+# Example_dogs.download_random_sub_breed_in_yd()
+# Example_dogs.create_yd_folder_for_dogs()
