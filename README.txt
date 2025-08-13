@@ -19,4 +19,4 @@ folder is creating for breed to folder of group and folder for sub-breed is crea
 Dog images are loaded into folders depending on the file
 Progress bar will appear if you will load breed image with sub-breed
 5.
-if all completed that my Frankenstein is ready
+if everything completed that my Frankenstein is ready
