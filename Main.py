@@ -2,13 +2,7 @@ import requests
 import json
 import os
 import Yandex_token
-
-# spot for choose image CATS, write your text in variable 'text'
-text = 'hello'
-# spot for choose image DOGS, write your text in variable 'breed'
-breed = 'hound'
-# without sub-breed - african
-# with sub-breed - hound
+from tqdm import tqdm
 
 
 # main class
@@ -45,7 +39,7 @@ class DownloadsImageCat(DownloadsImage):
         """
         # we do the request until we get response
         while str(requests.get(f'{self.yd_url}{self.yd_url_1}?path={self.name_group}%2F{text}', headers=self.headers)) != '<Response [200]>':
-            print('Ждем загрузки файла с котиками на Яндекс диск')
+            pass
         # we gain need data and make dictionary
         responses = requests.get(f'{self.yd_url}{self.yd_url_1}?path={self.name_group}%2F{text}', headers=self.headers)
         data = {
@@ -55,14 +49,12 @@ class DownloadsImageCat(DownloadsImage):
         }
         # we check a file .json in repository, if he is then refresh file, if he is not then create file
         if str(os.path.exists('cat_report.json')) == 'True':
-            print('Обновляем файл .json с отчетом о котиках')
             with open("cat_report.json", "r") as file:
                 list_data = json.load(file)
             list_data.append(data)
             with open(f'cat_report.json', 'w', encoding='utf-8') as file:
                 json.dump(list_data, file, indent=4, ensure_ascii=False)
         else:
-            print('Создаем файл .json с отчетом о котиках')
             with open(f'cat_report.json', 'w', encoding='utf-8') as file:
                 list_data = []
                 list_data.append(data)
@@ -83,7 +75,7 @@ class DownloadsImageCat(DownloadsImage):
                     self.create_yd_folder_for_group()
                     return self.download_cat_in_yd()
             except KeyError:
-                print('Ошибка. В теле ответа не найден ключ "error", всё нормально! Продолжаем работать;)')
+                pass
         else:
             print('Файл с котиками с таким именем уже имеется на Яндекс диске')
             return
@@ -93,17 +85,15 @@ class DownloadsImageCat(DownloadsImage):
 
 # inherited class for dogs
 class DownloadsImageDog(DownloadsImage):
-    # quantity_images = 5
     url_list_all_breeds = 'https://dog.ceo/api/breeds/list/all'
-    url_random_image_by_breed = f'https://dog.ceo/api/breed/{breed}/images/random'
-    url_random_image_by_sub_breed = f'https://dog.ceo/api/breed/{breed}/'
-    # breed_collection = f'https://dog.ceo/api/breed/hound/images/random/{quantity_images}'
     def __init__(self, token, breed):
         super().__init__(token)
         self.breed = breed
-        self.for_name = 0
-        self.sub_breed = 0
-        self.sb = 0
+        self._for_name = 0
+        self._sub_breed = 0
+        self._sb = 0
+        self._url_random_image_by_breed = f'https://dog.ceo/api/breed/{self.breed}/images/random'
+        self._url_random_image_by_sub_breed = f'https://dog.ceo/api/breed/{self.breed}/'
 
     def check_breed_in_list(self):
         """
@@ -144,7 +134,7 @@ class DownloadsImageDog(DownloadsImage):
             if self.check_sub_breed_in_list():
                 print('Создание папок для подпород')
                 responses = requests.get(self.url_list_all_breeds)
-                for sb in responses.json()['message'][breed]:
+                for sb in tqdm(responses.json()['message'][breed]): # make progress bar
                     requests.put(f'{self.yd_url}{self.yd_url_1}?path={self.name_group}%2F{self.breed}%2F{sb}',
                                  headers=self.headers)
         else:
@@ -153,11 +143,12 @@ class DownloadsImageDog(DownloadsImage):
     def dog_breed_report(self):
         """
         report is making of file in yandex disk
+        it will work only after method download_random_breed_in_yd, him need self.sb and self.for_name
         """
         # we do the request until we get response
         while str(requests.get(f'{self.yd_url}{self.yd_url_1}?path={self.name_group}%2F{self.breed}%2F{self.breed + '_' + self.for_name[-1]}',
             headers=self.headers)) != '<Response [200]>':
-            print('Ждем загрузки файла с собачками на Яндекс диске')
+            pass
         # we gain need data and make dictionary
         responses = requests.get(f'{self.yd_url}{self.yd_url_1}?path={self.name_group}%2F{self.breed}%2F{self.breed + '_' + self.for_name[-1]}',
             headers=self.headers)
@@ -165,6 +156,7 @@ class DownloadsImageDog(DownloadsImage):
 
     def dog_sub_breed_report(self):
         """
+        report is making of file in yandex disk
         it will work only after method download_random_sub_breed_in_yd, him need self.sb and self.for_name
         """
         # we do the request until we get response
@@ -178,23 +170,21 @@ class DownloadsImageDog(DownloadsImage):
 
     def dog_create_json(self, responses):
         """
-         write data to file
+         write data to file, it only with dog_breed_report and dog_sub_breed_report
         """
         data = {
             'name': responses.json()['name'],
             'created': responses.json()['created'],
             'size': responses.json()['size']
         }
-        # we check a file .json in repository, if he is then refresh file, if he is not then create file
+        # check a file .json in repository, if he is then refresh file, if he is not then create file
         if str(os.path.exists('dog_report.json')) == 'True':
-            print('Обновляем файл .json с отчетом о собачках')
             with open("dog_report.json", "r") as file:
                 list_data = json.load(file)
             list_data.append(data)
             with open(f'dog_report.json', 'w', encoding='utf-8') as file:
                 json.dump(list_data, file, indent=4, ensure_ascii=False)
         else:
-            print('Создаем файл .json с отчетом о собачках')
             with open(f'dog_report.json', 'w', encoding='utf-8') as file:
                 list_data = []
                 list_data.append(data)
@@ -204,35 +194,41 @@ class DownloadsImageDog(DownloadsImage):
         """
         load a random gog image in disk
         """
-        # create folder for dogs
-        self.create_yd_folder_for_dogs()
-        # start download image
-        responses_dog = (requests.get(self.url_random_image_by_breed)).json()['message'] # get reference for loading
-        self.for_name = responses_dog.split('/') # highlight a piece for name
-        responses = requests.get(f'{self.yd_url}{self.yd_url_1}?path={self.name_group}%2F{self.breed}%2F{self.breed+'_'+self.for_name[-1]}',
-                headers=self.headers) # check file name exist in yandex disk
-        # check if file name exist in yandex disk
-        if str(responses) != '<Response [200]>':
-            responses = requests.post(
-                f'{self.yd_url}{self.yd_url_2}?path={self.name_group}%2F{self.breed}%2F{self.breed+'_'+self.for_name[-1]}&url={responses_dog}',
-                headers=self.headers)
-            # make report
-            self.dog_breed_report()
+        if self.check_breed_in_list():
+            # create folder for dogs
+            self.create_yd_folder_for_dogs()
+            # start download image
+            print('Загружаем фото с выбранной породой')
+            responses_dog = (requests.get(self.url_random_image_by_breed)).json()['message'] # get reference for loading
+            self.for_name = responses_dog.split('/') # highlight a piece for name
+            responses = requests.get(f'{self.yd_url}{self.yd_url_1}?path={self.name_group}%2F{self.breed}%2F{self.breed+'_'+self.for_name[-1]}',
+                    headers=self.headers) # check file name exist in yandex disk
+            # check if file name exist in yandex disk
+            if str(responses) != '<Response [200]>':
+                responses = requests.post(
+                    f'{self.yd_url}{self.yd_url_2}?path={self.name_group}%2F{self.breed}%2F{self.breed+'_'+self.for_name[-1]}&url={responses_dog}',
+                    headers=self.headers)
+                # make report
+                self.dog_breed_report()
+            else:
+                pass
+            self.download_random_sub_breed_in_yd() # start loading sub-breed
         else:
-            print('Файл с собачками с таким именем уже имеется на Яндекс диске')
-        self.download_random_sub_breed_in_yd() # start loading sub-breed
+            print('Указанной породы нет в списке')
 
     def download_random_sub_breed_in_yd(self):
         """
         load for sub-breed
+        it will work only after method download_random_breed_in_yd
         """
         if self.check_sub_breed_in_list():
+            print('Загружаем фото с подпородами')
             responses = requests.get(self.url_list_all_breeds)
             #
-            self.sub_breed = responses.json()['message'][breed]
+            self.sub_breed = responses.json()['message'][self.breed]
             # do not create a folder, this is not an independent method
             # self.create_yd_folder_for_dogs()
-            for sb in self.sub_breed:
+            for sb in tqdm(self.sub_breed): # make progress bar
                 self.sb = sb
                 responses_dog = (requests.get(f'{self.url_random_image_by_sub_breed}{self.sb}/images/random')).json()[
                     'message']  # get reference for loading
@@ -252,12 +248,20 @@ class DownloadsImageDog(DownloadsImage):
         else:
             pass
 
+
+# spot for choose image CATS, write your text in variable 'text'
+text = 'hello'
+
+# spot for choose image DOGS, write your text in variable 'breed'
+breed = 'terrier'
+# without sub-breed - african, havanese
+# with sub-breed - hound (7 files), terrier (23 files)
+
+# check work
 # Example_cat = DownloadsImageCat(Yandex_token.yd_t, text)
 # Example_cat.download_cat_in_yd()
+# Example_dogs = DownloadsImageDog(Yandex_token.yd_t, breed)
+# Example_dogs.download_random_breed_in_yd()
 
-Example_dogs = DownloadsImageDog(Yandex_token.yd_t, breed)
-# print(Example_dogs.check_breed_in_list())
-# print(Example_dogs.check_sub_breed_in_list())
-Example_dogs.download_random_breed_in_yd()
-# Example_dogs.download_random_sub_breed_in_yd()
-# Example_dogs.create_yd_folder_for_dogs()
+# СДЕЛАТЬ README, ПРОВЕРИТЬ ДЛИННУ СТРОК, ПРИЧЕСАТЬ КОД ПО PEP8
+# ПЕРЕПРОВЕРИТЬ ЗАДАНИЕ
